@@ -50,8 +50,7 @@ def get_coinmarketcap_data(currency, debug, test):
         if debug:                
             print(f' {time.strftime("%H:%M:%S")} downloading coinmarketcap data... ', end='', flush=True)    
             c_start = time.perf_counter()
-        
-        # headers = {'Accepts': 'application/json', 'X-CMC_PRO_API_KEY': api_key}
+
         url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
         parameters = {'start': '1', 'limit': num_coins, 'convert': currency}
         cmc_data = requests.get(url, headers=cmc_headers, params=parameters).json()
@@ -104,6 +103,9 @@ def prepare_data(currency, debug=False, test=False):
         coin_found = False
         for coin_json in cmc_data:
             if coin_name in [coin_json['name'].lower(), coin_json['symbol'].lower()]:
+                if Coin.debug:
+                    print(f' {coin_name} matched to {coin_json["name"]}')
+
                 coins.append(Coin(cmc_data=coin_json, ini_data=holdings[coin_name]))
                 coin_found = True
                 break
