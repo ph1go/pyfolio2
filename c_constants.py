@@ -39,7 +39,7 @@ if not config_file.is_file():
 
     cfg['coinmarketcap api'] = {}
     cfg['coinmarketcap api']['api key'] = api_key
-    cfg['options'] = {'default currency': 'usd', 'number of pyfolio2': '400', 'show bitcoin if not held': True}
+    cfg['options'] = {'default currency': 'usd', 'number of coins': '200', 'show bitcoin if not held': True}
     cfg['decimal places'] = {'fiat': '5', 'crypto': '5', 'percent': '3'}
 
     with config_file.open('w') as f:
@@ -57,7 +57,7 @@ if not api_key:
 
 cmc_headers = {'Accepts': 'application/json', 'X-CMC_PRO_API_KEY': api_key}
 
-num_coins = cfg['options'].getint('number of pyfolio2', fallback=400)
+num_coins = cfg['options'].getint('number of coins', fallback=200)
 currency = cfg['options'].get('default currency', fallback='usd')
 show_bitcoin_if_not_held = cfg['options'].getboolean('show bitcoin if not held', fallback=True)
 

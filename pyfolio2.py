@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+from c_constants import currency
 from c_functions import prepare_data, display_data
 
 
@@ -12,9 +13,11 @@ if __name__ == '__main__':
     )
     parser.add_argument('-d', '--debug', action='store_true')
     parser.add_argument(
-        '-t', '--test', action='store_true', help='use locally saved data instead of getting fresh from the apis'
+        '-t', '--test', action='store_true',
+        help='use locally saved data instead of getting it fresh from the apis (saves api calls while testing)'
     )
 
     args = parser.parse_args()
-    coins = prepare_data(currency=args.currency.upper(), debug=args.debug, test=args.test)
+    currency = args.currency or currency
+    coins = prepare_data(currency=currency.upper(), debug=args.debug, test=args.test)
     display_data(coins=sorted(coins))
