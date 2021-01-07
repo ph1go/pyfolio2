@@ -207,16 +207,9 @@ def display_data(coins: List[Coin]):
 
     for idx, c in enumerate(coins):
         is_eth = True if c.name.lower() == 'ethereum' else False
-        is_btc = True if c.name.lower() == 'bitcoin' else False
-
-        #if c.name.lower() == 'ethereum':
-            #is_eth = True
-
-        #elif c.name.lower() == 'bitcoin':
-            #is_btc = True
-
         value_1_in_eth = "" if is_eth else c.value_of_one.in_eth.formatted
         value_all_in_eth = "" if is_eth else c.value_of_held.in_eth.formatted
+        is_btc = True if c.name.lower() == 'bitcoin' else False
         value_1_in_btc = "" if is_btc else c.value_of_one.in_btc.formatted
         value_all_in_btc = "" if is_btc else c.value_of_held.in_btc.formatted
 
