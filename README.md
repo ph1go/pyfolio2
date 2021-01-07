@@ -1,9 +1,17 @@
+
+Pyfolio2
+===================
 This is a small Python script to show you the value (in a currency of your choice, default = USD) of 
 your holdings in whatever coins you hold, updated to include earnings from ETH staking.
 
 It won't show you if your holdings are up or down or whatever, it just gives you an at-a-glance total
 according to the current prices on CoinMarketCap. If you're staking and you provide indexes of your 
 validator(s), you will also see your earnings.
+
+Installation
+============
+Extract the files into their own folder and run pyfolio2.py from a CLI environment (Command Prompt or 
+PowerShell in Windows or any Linux terminal).
 
 The config.ini file
 ===================
