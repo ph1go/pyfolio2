@@ -1,7 +1,7 @@
 
 Pyfolio2
 ===================
-This is a small Python script to show you the value (in a currency of your choice, default = USD) of 
+This is a small Python (3.7+) script to show you the value (in a currency of your choice, default = USD) of 
 your holdings in whatever coins you hold, updated to include earnings from ETH staking.
 
 It won't show you if your holdings are up or down or whatever, it just gives you an at-a-glance total
