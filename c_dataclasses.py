@@ -5,7 +5,7 @@ import json
 import requests
 import time
 
-from c_constants import bc_json_file, dp
+from c_constants import bc_json_file, dp, split_validators
 
 
 @dataclass
@@ -42,10 +42,31 @@ class Subtype:
         self.in_eth = Quantity(raw=self.in_fiat.raw / Coin.eth_price, dec_places=dp.crypto, currency='ETH')
 
 
+@total_ordering
 @dataclass
 class Validator:
-    index: int
+    index: int = field(init=False)
+    balance: float = field(init=False)
+    staked: float = 32
+    earned: Subtype = field(init=False)
 
+    val_dict: InitVar[Dict] = None
+    fiat_value_of_one: InitVar[float] = None
+    longest_val_index: InitVar[int] = None
+
+    def __post_init__(self, val_dict: Dict, fiat_value_of_one: float, longest_val_index: int):
+        self.index = val_dict['validatorindex']
+        self.balance = val_dict['balance'] / 1000000000
+        self.earned = Subtype(
+            quantity=self.balance - self.staked, s_str=f'{self.index:>{longest_val_index}}',
+            fiat_value_of_one=fiat_value_of_one
+        )
+
+    def __eq__(self, other):
+        return self.index == other.index
+
+    def __lt__(self, other):
+        return self.index < other.index
 
 
 @total_ordering
@@ -57,6 +78,7 @@ class Coin:
     total_held_in_btc: ClassVar[Quantity]
     total_held_in_eth: ClassVar[Quantity]
     currency: ClassVar[str] = 'USD'
+    is_staking_eth: ClassVar[bool] = False
     debug: ClassVar[bool] = False
     test: ClassVar[bool] = False
 
@@ -75,7 +97,8 @@ class Coin:
     qty_staked: Optional[Subtype] = field(init=False, default=None)
     qty_earned: Optional[Subtype] = field(init=False, default=None)
 
-    validators: List[str] = field(init=False, default_factory=list)
+    validator_indexes: List[str] = field(init=False, default_factory=list)
+    validators: List[Validator] = field(init=False, default_factory=list)
 
     cmc_data: InitVar[Dict] = None
     ini_data: InitVar[Dict] = None
@@ -90,18 +113,25 @@ class Coin:
 
         if self.name.lower() == 'ethereum':
             self.qty_held = Subtype(quantity=ini_data['held'], s_str='held  ', fiat_value_of_one=fiat_value_of_one)
-            self.validators = ini_data.get('validators')
+            self.validator_indexes = ini_data.get('validators')
 
-            if self.validators:
+            if self.validator_indexes:
                 bc_data = self.get_beaconchain_data()
-                    
-                balance = sum([v['balance'] for v in bc_data])
-                self.qty_staked = Subtype(
-                    quantity=32 * len(bc_data), s_str='staked', fiat_value_of_one=fiat_value_of_one
-                )
 
-                earned = (balance / 1000000000) - self.qty_staked.quantity
-                self.qty_earned = Subtype(quantity=earned, s_str='earned', fiat_value_of_one=fiat_value_of_one)
+                longest_val_index = len(str(max([str(x['validatorindex']) for x in bc_data], key=len)))
+
+                self.validators = [
+                    Validator(val_dict=v, fiat_value_of_one=fiat_value_of_one, longest_val_index=longest_val_index)
+                    for v in bc_data
+                ]
+
+                total_staked = sum([v.staked for v in self.validators])
+                self.qty_staked = Subtype(quantity=total_staked, s_str='staked', fiat_value_of_one=fiat_value_of_one)
+
+                total_earned = sum([v.earned.quantity for v in self.validators])
+                self.qty_earned = Subtype(quantity=total_earned, s_str='earned', fiat_value_of_one=fiat_value_of_one)
+
+                Coin.is_staking_eth = True
 
             else:
                 self.qty_staked = None
@@ -129,7 +159,7 @@ class Coin:
                 print(f' {time.strftime("%H:%M:%S")} downloading beaconcha.in data... ', end='', flush=True)
                 b_start = time.perf_counter()
                 
-            url = f'https://beaconcha.in/api/v1/validator/{",".join(self.validators)}'
+            url = f'https://beaconcha.in/api/v1/validator/{",".join(self.validator_indexes)}'
             bc_data = requests.get(url).json()
 
             with bc_json_file.open('w') as f:
@@ -149,6 +179,9 @@ class Coin:
             if self.validators:
                 self.qty_staked.in_eth.update_formatted_str(dec_places=dp.crypto, padding=longest_symbol)
                 self.qty_earned.in_eth.update_formatted_str(dec_places=dp.crypto, padding=longest_symbol)
+
+                for validator in self.validators:
+                    validator.earned.in_eth.update_formatted_str(dec_places=dp.crypto, padding=longest_symbol)
 
         self.perc_of_total = Quantity(raw=perc_of_total, currency='%', dec_places=dp.percent)
 

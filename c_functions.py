@@ -4,7 +4,10 @@ import time
 import configparser
 from typing import List
 
-from c_constants import cmc_json_file, holdings_file, cmc_headers, num_coins, show_bitcoin_if_not_held, dp
+from c_constants import (
+    cmc_json_file, holdings_file, cmc_headers, num_coins, split_validators, show_bitcoin_if_not_held, dp
+)
+
 from c_dataclasses import Coin, Quantity, Elements
 
 
@@ -138,9 +141,11 @@ def prepare_data(currency, debug=False, test=False):
 
 def display_data(coins: List[Coin]):
     pad = 1
+
+    min_name_width = 9 if Coin.is_staking_eth else 4
     l_rank = max(3, len(str(max([c.rank for c in coins]))))
     l_rank_w_pad = l_rank + (2 * pad) + 1
-    l_name = len(str(max([c.name for c in coins], key=len)))
+    l_name = max(min_name_width, len(str(max([c.name for c in coins], key=len))))
     l_name_w_pad = l_name + (2 * pad)
     l_symbol = len(str(max([c.symbol for c in coins], key=len)))
     l_symbol_w_pad = l_symbol + (2 * pad)
@@ -203,6 +208,14 @@ def display_data(coins: List[Coin]):
         f'{e.hor_thin * l_perc_w_pad}{e.mid_thin.right}'
     )
 
+    blank_line = (
+        f'{e.ver_thick}{" " * l_rank_w_pad}{e.ver_thin}{" " * l_name_w_pad}'
+        f'{e.ver_thin}{" " * whole_1}'
+        f'{e.ver_thick}{" " * l_held_w_pad}{e.ver_thick}'
+        f'{" " * whole_all}{e.ver_thick}'
+        f'{" " * l_perc_w_pad}{e.ver_thick}'
+    )
+
     print(f'\n {time.strftime("%A - %Y/%m/%d - %X")}\n\n {top}\n {header}\n {mid_thick}')
 
     for idx, c in enumerate(coins):
@@ -213,30 +226,60 @@ def display_data(coins: List[Coin]):
         value_1_in_btc = "" if is_btc else c.value_of_one.in_btc.formatted
         value_all_in_btc = "" if is_btc else c.value_of_held.in_btc.formatted
 
-        if is_eth and idx > 0 and c.qty_staked and c.qty_earned:
-            print(f' {mid_thin}')
+        if is_eth:
+            top_str = (
+                f' {e.ver_thick}{col_pad}{c.rank:>{l_rank}}){col_pad}{e.ver_thin}'
+                f'{col_pad}{c.name:<{l_name}}{col_pad}{e.ver_thin}'
+                f'{col_pad}{c.value_of_one.in_fiat.formatted:>{l_1_fiat}}{col_pad}'
+                f'{col_pad}{value_1_in_btc:>{l_1_btc}}{col_pad}'
+                f'{col_pad}{value_1_in_eth:>{l_1_eth}}{col_pad}{e.ver_thick}'
+            )
 
-        print(
-            f' {e.ver_thick}{col_pad}{c.rank:>{l_rank}}){col_pad}{e.ver_thin}'
-            f'{col_pad}{c.name:<{l_name}}{col_pad}{e.ver_thin}'
-            f'{col_pad}{c.value_of_one.in_fiat.formatted:>{l_1_fiat}}{col_pad}'
-            f'{col_pad}{value_1_in_btc:>{l_1_btc}}{col_pad}'
-            f'{col_pad}{value_1_in_eth:>{l_1_eth}}{col_pad}{e.ver_thick}'
-            f'{col_pad}{c.total_held.formatted:>{l_held}}{col_pad}{e.ver_thick}'
-            f'{col_pad}{c.value_of_held.in_fiat.formatted:>{l_all_fiat}}{col_pad}'
-            f'{col_pad}{value_all_in_btc:>{l_all_btc}}{col_pad}'
-            f'{col_pad}{value_all_in_eth:>{l_all_eth}}{col_pad}{e.ver_thick}'
-            f'{col_pad}{c.perc_of_total.formatted:>{l_perc}}{col_pad}{e.ver_thick}'
-        )
+            if Coin.is_staking_eth:
+                if idx > 0:
+                    print(f' {mid_thin}')
 
-        if is_eth and c.qty_held and c.qty_staked and c.qty_earned:
+                top_str += (
+                    f'{" " * l_held_w_pad}{e.ver_thick}'
+                    f'{" " * whole_all}{e.ver_thick}'
+                    f'{" " * l_perc_w_pad}{e.ver_thick}'
+                )
+
+            else:
+                top_str += (
+                    f'{col_pad}{c.total_held.formatted:>{l_held}}{col_pad}{e.ver_thick}'
+                    f'{col_pad}{c.value_of_held.in_fiat.formatted:>{l_all_fiat}}{col_pad}'
+                    f'{col_pad}{value_all_in_btc:>{l_all_btc}}{col_pad}'
+                    f'{col_pad}{value_all_in_eth:>{l_all_eth}}{col_pad}{e.ver_thick}'
+                    f'{col_pad}{c.perc_of_total.formatted:>{l_perc}}{col_pad}{e.ver_thick}'
+                )
+
+        else:
+            top_str = (
+                f' {e.ver_thick}{col_pad}{c.rank:>{l_rank}}){col_pad}{e.ver_thin}'
+                f'{col_pad}{c.name:<{l_name}}{col_pad}{e.ver_thin}'
+                f'{col_pad}{c.value_of_one.in_fiat.formatted:>{l_1_fiat}}{col_pad}'
+                f'{col_pad}{value_1_in_btc:>{l_1_btc}}{col_pad}'
+                f'{col_pad}{value_1_in_eth:>{l_1_eth}}{col_pad}{e.ver_thick}'
+                f'{col_pad}{c.total_held.formatted:>{l_held}}{col_pad}{e.ver_thick}'
+                f'{col_pad}{c.value_of_held.in_fiat.formatted:>{l_all_fiat}}{col_pad}'
+                f'{col_pad}{value_all_in_btc:>{l_all_btc}}{col_pad}'
+                f'{col_pad}{value_all_in_eth:>{l_all_eth}}{col_pad}{e.ver_thick}'
+                f'{col_pad}{c.perc_of_total.formatted:>{l_perc}}{col_pad}{e.ver_thick}'
+            )
+
+        print(top_str)
+
+        if is_eth and c.qty_held and Coin.is_staking_eth:
             big_gap_left = l_1_fiat + l_1_btc + l_1_eth + (pad * 4)
             big_gap_right = l_name + l_symbol + l_1_fiat + l_1_btc + (pad * 4)
 
-            for s in [c.qty_held, c.qty_staked, c.qty_earned]:
+            # print(f' {blank_line}')
+
+            for s in [c.qty_held, c.qty_staked]:
                 print(
                     f' {e.ver_thick}{col_pad}{" " * l_rank} {col_pad}{e.ver_thin}'
-                    f'{col_pad}- {s.s_str:<{l_name-2}}{col_pad}{e.ver_thin}'
+                    f'{col_pad} - {s.s_str:<{l_name-3}}{col_pad}{e.ver_thin}'
                     f'{col_pad}{" " * big_gap_left}{col_pad}{e.ver_thick}'
                     f'{col_pad}{s.in_eth.formatted:>{l_held}}{col_pad}{e.ver_thick}'
                     f'{col_pad}{s.in_fiat.formatted:>{l_all_fiat}}{col_pad}'
@@ -244,8 +287,47 @@ def display_data(coins: List[Coin]):
                     f'{col_pad}{" " * l_all_eth}{col_pad}{e.ver_thick}'
                     f'{col_pad}{" " * l_perc}{col_pad}{e.ver_thick}'
                 )
-        
-            if idx + 1 < len(coins) and c.qty_staked and c.qty_earned:
+
+            if split_validators:
+                print(f' {blank_line}')
+                for v in sorted(c.validators):
+                    print(
+                        f' {e.ver_thick}{col_pad}{" " * l_rank} {col_pad}{e.ver_thin}'
+                        f'{col_pad}  - {v.earned.s_str:<{l_name-4}}{col_pad}{e.ver_thin}'
+                        f'{col_pad}{" " * big_gap_left}{col_pad}{e.ver_thick}'
+                        f'{col_pad}{v.earned.in_eth.formatted:>{l_held}}{col_pad}{e.ver_thick}'
+                        f'{col_pad}{v.earned.in_fiat.formatted:>{l_all_fiat}}{col_pad}'
+                        f'{col_pad}{v.earned.in_btc.formatted:>{l_all_btc}}{col_pad}'
+                        f'{col_pad}{" " * l_all_eth}{col_pad}{e.ver_thick}'
+                        f'{col_pad}{" " * l_perc}{col_pad}{e.ver_thick}'
+                    )
+
+                print(f' {blank_line}')
+
+            print(
+                f' {e.ver_thick}{col_pad}{" " * l_rank} {col_pad}{e.ver_thin}'
+                f'{col_pad} - {c.qty_earned.s_str:<{l_name-3}}{col_pad}{e.ver_thin}'
+                f'{col_pad}{" " * big_gap_left}{col_pad}{e.ver_thick}'
+                f'{col_pad}{c.qty_earned.in_eth.formatted:>{l_held}}{col_pad}{e.ver_thick}'
+                f'{col_pad}{c.qty_earned.in_fiat.formatted:>{l_all_fiat}}{col_pad}'
+                f'{col_pad}{c.qty_earned.in_btc.formatted:>{l_all_btc}}{col_pad}'
+                f'{col_pad}{" " * l_all_eth}{col_pad}{e.ver_thick}'
+                f'{col_pad}{" " * l_perc}{col_pad}{e.ver_thick}'
+            )
+
+            print(f' {blank_line}')
+
+            print(
+                f' {e.ver_thick}{" " * l_rank_w_pad}{e.ver_thin}{" TOTAL ETH":{l_name_w_pad}}'
+                f'{e.ver_thin}{" " * whole_1}'
+                f'{e.ver_thick}{col_pad}{c.total_held.formatted:>{l_held}}{col_pad}{e.ver_thick}'
+                f'{col_pad}{c.value_of_held.in_fiat.formatted:>{l_all_fiat}}{col_pad}'
+                f'{col_pad}{value_all_in_btc:>{l_all_btc}}{col_pad}'
+                f'{col_pad}{value_all_in_eth:>{l_all_eth}}{col_pad}{e.ver_thick}'
+                f'{col_pad}{c.perc_of_total.formatted:>{l_perc}}{col_pad}{e.ver_thick}'
+            )
+
+            if idx + 1 < len(coins) and Coin.is_staking_eth:
                 print(f' {mid_thin}')
 
     bottom = (
