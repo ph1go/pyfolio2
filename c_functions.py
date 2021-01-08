@@ -5,7 +5,8 @@ import configparser
 from typing import List
 
 from c_constants import (
-    cmc_json_file, holdings_file, cmc_headers, num_coins, split_validators, show_bitcoin_if_not_held, dp
+    cmc_json_file, holdings_file, cmc_headers, num_coins, split_validators, show_bitcoin_if_not_held, dp,
+    details_in_name_col
 )
 
 from c_dataclasses import Coin, Quantity, Elements
@@ -188,6 +189,7 @@ def display_data(coins: List[Coin]):
         f'{col_pad}{"in ETH":>{l_all_eth}}{col_pad}{e.ver_thick}'
     )
 
+    big_gap = l_1_fiat + l_1_btc + l_1_eth + (pad * 4)
     whole_1 = l_1_fiat_w_pad + l_1_btc_w_pad + l_1_eth_w_pad
     whole_all = l_all_fiat_w_pad + l_all_btc_w_pad + l_all_eth_w_pad
 
@@ -270,31 +272,48 @@ def display_data(coins: List[Coin]):
 
         print(top_str)
 
-        if is_eth and c.qty_held and Coin.is_staking_eth:
-            big_gap_left = l_1_fiat + l_1_btc + l_1_eth + (pad * 4)
-            big_gap_right = l_name + l_symbol + l_1_fiat + l_1_btc + (pad * 4)
+        sub_line_start = f' {e.ver_thick}{col_pad}{"":{l_rank}} {col_pad}{e.ver_thin}'
 
+        if is_eth and c.qty_held and Coin.is_staking_eth:
             # print(f' {blank_line}')
 
             for s in [c.qty_held, c.qty_staked]:
+                if details_in_name_col:
+                    s_details_str = (
+                        f'{col_pad} - {s.short_str:<{l_name-3}}{col_pad}{e.ver_thin}'
+                        f'{col_pad}{" " * big_gap}{col_pad}'
+                    )
+
+                else:
+                    s_details_str = (
+                        f'{"":{l_name_w_pad}}{e.ver_thin}{col_pad}{s.long_str:>{big_gap}}{col_pad}'
+                    )
+
                 print(
-                    f' {e.ver_thick}{col_pad}{" " * l_rank} {col_pad}{e.ver_thin}'
-                    f'{col_pad} - {s.s_str:<{l_name-3}}{col_pad}{e.ver_thin}'
-                    f'{col_pad}{" " * big_gap_left}{col_pad}{e.ver_thick}'
+                    f'{sub_line_start}{s_details_str}{e.ver_thick}'
                     f'{col_pad}{s.in_eth.formatted:>{l_held}}{col_pad}{e.ver_thick}'
                     f'{col_pad}{s.in_fiat.formatted:>{l_all_fiat}}{col_pad}'
                     f'{col_pad}{s.in_btc.formatted:>{l_all_btc}}{col_pad}'
-                    f'{col_pad}{" " * l_all_eth}{col_pad}{e.ver_thick}'
-                    f'{col_pad}{" " * l_perc}{col_pad}{e.ver_thick}'
+                    f'{col_pad}{"":{l_all_eth}}{col_pad}{e.ver_thick}'
+                    f'{col_pad}{"":{l_perc}}{col_pad}{e.ver_thick}'
                 )
 
             if split_validators:
                 print(f' {blank_line}')
                 for v in sorted(c.validators):
+                    if details_in_name_col:
+                        v_details_str = (
+                            f'{col_pad} - {v.index:<{l_name - 3}}{col_pad}{e.ver_thin}'
+                            f'{col_pad}{" " * big_gap}{col_pad}'
+                        )
+
+                    else:
+                        v_details_str = (
+                            f'{"":{l_name_w_pad}}{e.ver_thin}{col_pad}{v.val_str:>{big_gap}}{col_pad}'
+                        )
+
                     print(
-                        f' {e.ver_thick}{col_pad}{" " * l_rank} {col_pad}{e.ver_thin}'
-                        f'{col_pad}  - {v.earned.s_str:<{l_name-4}}{col_pad}{e.ver_thin}'
-                        f'{col_pad}{" " * big_gap_left}{col_pad}{e.ver_thick}'
+                        f'{sub_line_start}{v_details_str}{e.ver_thick}'
                         f'{col_pad}{v.earned.in_eth.formatted:>{l_held}}{col_pad}{e.ver_thick}'
                         f'{col_pad}{v.earned.in_fiat.formatted:>{l_all_fiat}}{col_pad}'
                         f'{col_pad}{v.earned.in_btc.formatted:>{l_all_btc}}{col_pad}'
@@ -304,10 +323,19 @@ def display_data(coins: List[Coin]):
 
                 print(f' {blank_line}')
 
+            if details_in_name_col:
+                e_details_str = (
+                    f'{col_pad} - {c.qty_earned.short_str:<{l_name-3}}{col_pad}{e.ver_thin}'
+                    f'{col_pad}{" " * big_gap}{col_pad}'
+                )
+
+            else:
+                e_details_str = (
+                    f'{"":{l_name_w_pad}}{e.ver_thin}{col_pad}{c.qty_earned.long_str:>{big_gap}}{col_pad}'
+                )
+
             print(
-                f' {e.ver_thick}{col_pad}{" " * l_rank} {col_pad}{e.ver_thin}'
-                f'{col_pad} - {c.qty_earned.s_str:<{l_name-3}}{col_pad}{e.ver_thin}'
-                f'{col_pad}{" " * big_gap_left}{col_pad}{e.ver_thick}'
+                f'{sub_line_start}{e_details_str}{e.ver_thick}'
                 f'{col_pad}{c.qty_earned.in_eth.formatted:>{l_held}}{col_pad}{e.ver_thick}'
                 f'{col_pad}{c.qty_earned.in_fiat.formatted:>{l_all_fiat}}{col_pad}'
                 f'{col_pad}{c.qty_earned.in_btc.formatted:>{l_all_btc}}{col_pad}'
@@ -317,10 +345,19 @@ def display_data(coins: List[Coin]):
 
             print(f' {blank_line}')
 
+            if details_in_name_col:
+                t_details_str = (
+                    f'{col_pad}{"TOTAL ETH":<{l_name}}{col_pad}{e.ver_thin}{col_pad}{" " * big_gap}{col_pad}'
+                )
+
+            else:
+                t_details_str = (
+                    f'{"":{l_name_w_pad}}{e.ver_thin}{col_pad}{"TOTAL ETH HELD":>{big_gap}}{col_pad}'
+                )
+
             print(
-                f' {e.ver_thick}{" " * l_rank_w_pad}{e.ver_thin}{" TOTAL ETH":{l_name_w_pad}}'
-                f'{e.ver_thin}{" " * whole_1}'
-                f'{e.ver_thick}{col_pad}{c.total_held.formatted:>{l_held}}{col_pad}{e.ver_thick}'
+                f'{sub_line_start}{t_details_str}{e.ver_thick}'
+                f'{col_pad}{c.total_held.formatted:>{l_held}}{col_pad}{e.ver_thick}'
                 f'{col_pad}{c.value_of_held.in_fiat.formatted:>{l_all_fiat}}{col_pad}'
                 f'{col_pad}{value_all_in_btc:>{l_all_btc}}{col_pad}'
                 f'{col_pad}{value_all_in_eth:>{l_all_eth}}{col_pad}{e.ver_thick}'

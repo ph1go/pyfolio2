@@ -70,3 +70,5 @@ dp = namedtuple('dp', 'fiat crypto percent')
 dp.fiat = cfg['decimal places'].getint('fiat', fallback=5)
 dp.crypto = cfg['decimal places'].getint('crypto', fallback=5)
 dp.percent = cfg['decimal places'].getint('percent', fallback=3)
+
+details_in_name_col = False

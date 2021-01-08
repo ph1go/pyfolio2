@@ -26,7 +26,8 @@ class Quantity:
 @dataclass
 class Subtype:
     quantity: float
-    s_str: str = ''
+    short_str: str = ''
+    long_str: str = ''
     in_fiat: Quantity = field(init=False)
     in_btc: Quantity = field(init=False)
     in_eth: Quantity = field(init=False)
@@ -46,6 +47,7 @@ class Subtype:
 @dataclass
 class Validator:
     index: int = field(init=False)
+    val_str: str = field(init=False)
     balance: float = field(init=False)
     staked: float = 32
     earned: Subtype = field(init=False)
@@ -56,9 +58,10 @@ class Validator:
 
     def __post_init__(self, val_dict: Dict, fiat_value_of_one: float, longest_val_index: int):
         self.index = val_dict['validatorindex']
+        self.val_str = f'Validator #{self.index} earnings'
         self.balance = val_dict['balance'] / 1000000000
         self.earned = Subtype(
-            quantity=self.balance - self.staked, s_str=f'{self.index:>{longest_val_index}}',
+            quantity=self.balance - self.staked, short_str=f'{self.index:>{longest_val_index}}',
             fiat_value_of_one=fiat_value_of_one
         )
 
@@ -112,7 +115,10 @@ class Coin:
         self.value_of_one = Subtype(quantity=1, fiat_value_of_one=fiat_value_of_one)
 
         if self.name.lower() == 'ethereum':
-            self.qty_held = Subtype(quantity=ini_data['held'], s_str='held  ', fiat_value_of_one=fiat_value_of_one)
+            self.qty_held = Subtype(
+                quantity=ini_data['held'], short_str='Held', long_str='Held', fiat_value_of_one=fiat_value_of_one
+            )
+
             self.validator_indexes = ini_data.get('validators')
 
             if self.validator_indexes:
@@ -126,10 +132,16 @@ class Coin:
                 ]
 
                 total_staked = sum([v.staked for v in self.validators])
-                self.qty_staked = Subtype(quantity=total_staked, s_str='staked', fiat_value_of_one=fiat_value_of_one)
+                self.qty_staked = Subtype(
+                    quantity=total_staked, short_str='Staked', long_str='Total staked',
+                    fiat_value_of_one=fiat_value_of_one
+                )
 
                 total_earned = sum([v.earned.quantity for v in self.validators])
-                self.qty_earned = Subtype(quantity=total_earned, s_str='earned', fiat_value_of_one=fiat_value_of_one)
+                self.qty_earned = Subtype(
+                    quantity=total_earned, short_str='Earned', long_str='Total earned',
+                    fiat_value_of_one=fiat_value_of_one
+                )
 
                 Coin.is_staking_eth = True
 
