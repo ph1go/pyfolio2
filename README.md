@@ -1,8 +1,8 @@
 
 Pyfolio2
 ===================
-This is a Python (3.7+) tool to show you the value (in a currency of your choice, default = USD) of 
-your holdings in whatever coins you hold, updated to include earnings from ETH staking.
+This is a Python (3.7+) tool to show you the value (in a currency of your choice, the default is USD) 
+of your holdings in whatever coins you hold, updated to include earnings from ETH staking.
 
 It won't show you if your holdings are up or down or whatever, it just gives you an at-a-glance total
 according to the current prices on CoinMarketCap. If you're staking and you provide indexes of your 
