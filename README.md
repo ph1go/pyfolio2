@@ -37,4 +37,4 @@ call to beaconcha.in to calculate your earnings and, from the number of validato
 Enter any other coins you hold in the "other coins" section. Use either the name (eg: Ethereum) or the 
 symbol (eg: ETH). Case doesn't matter. If your coin isn't accepted and you're sure you entered either its
 name or symbol correctly, check that the "number of coins" setting in config.ini is high enough to reach
-that coin's rank. The default is 200.
+that coin's rank.

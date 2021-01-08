@@ -88,11 +88,6 @@ class Coin:
 
         self.value_of_one = Subtype(quantity=1, fiat_value_of_one=fiat_value_of_one)
 
-        held = ini_data.get('held')
-
-        # if self.name.lower() == 'bitcoin':
-        #
-
         if self.name.lower() == 'ethereum':
             self.qty_held = Subtype(quantity=ini_data['held'], s_str='held  ', fiat_value_of_one=fiat_value_of_one)
             self.validators = ini_data.get('validators')
@@ -101,7 +96,10 @@ class Coin:
                 bc_data = self.get_beaconchain_data()
                     
                 balance = sum([v['balance'] for v in bc_data])
-                self.qty_staked = Subtype(quantity=32 * len(bc_data), s_str='staked', fiat_value_of_one=fiat_value_of_one)
+                self.qty_staked = Subtype(
+                    quantity=32 * len(bc_data), s_str='staked', fiat_value_of_one=fiat_value_of_one
+                )
+
                 earned = (balance / 1000000000) - self.qty_staked.quantity
                 self.qty_earned = Subtype(quantity=earned, s_str='earned', fiat_value_of_one=fiat_value_of_one)
 
@@ -148,13 +146,8 @@ class Coin:
         if self.name.lower() == 'ethereum':
             self.qty_held.in_eth.update_formatted_str(dec_places=dp.crypto, padding=longest_symbol)
 
-            try:
+            if self.validators:
                 self.qty_staked.in_eth.update_formatted_str(dec_places=dp.crypto, padding=longest_symbol)
-
-            except AttributeError:
-                pass
-
-            else:
                 self.qty_earned.in_eth.update_formatted_str(dec_places=dp.crypto, padding=longest_symbol)
 
         self.perc_of_total = Quantity(raw=perc_of_total, currency='%', dec_places=dp.percent)
