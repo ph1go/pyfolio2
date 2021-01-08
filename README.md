@@ -21,6 +21,8 @@ https://pro.coinmarketcap.com/ and then paste it in when asked.
 The "number of coins" is how many coins are returned by the CoinMarketCap API call. The default is 200, 
 if you hold coins that are ranked lower than that, increase it accordingly.
 
+If "show individual validators" is True, your earnings will be shown per-validator as well as in total.
+
 If "show bitcoin if not held" is True, Bitcoin's price will be shown even if you don't include it in the
 holdings file.
 
