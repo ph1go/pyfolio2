@@ -42,6 +42,12 @@ class Subtype:
         self.in_eth = Quantity(raw=self.in_fiat.raw / Coin.eth_price, dec_places=dp.crypto, currency='ETH')
 
 
+@dataclass
+class Validator:
+    index: int
+
+
+
 @total_ordering
 @dataclass
 class Coin:
@@ -141,8 +147,15 @@ class Coin:
 
         if self.name.lower() == 'ethereum':
             self.qty_held.in_eth.update_formatted_str(dec_places=dp.crypto, padding=longest_symbol)
-            self.qty_staked.in_eth.update_formatted_str(dec_places=dp.crypto, padding=longest_symbol)
-            self.qty_earned.in_eth.update_formatted_str(dec_places=dp.crypto, padding=longest_symbol)
+
+            try:
+                self.qty_staked.in_eth.update_formatted_str(dec_places=dp.crypto, padding=longest_symbol)
+
+            except AttributeError:
+                pass
+
+            else:
+                self.qty_earned.in_eth.update_formatted_str(dec_places=dp.crypto, padding=longest_symbol)
 
         self.perc_of_total = Quantity(raw=perc_of_total, currency='%', dec_places=dp.percent)
 
