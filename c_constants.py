@@ -71,4 +71,4 @@ dp.fiat = cfg['decimal places'].getint('fiat', fallback=5)
 dp.crypto = cfg['decimal places'].getint('crypto', fallback=5)
 dp.percent = cfg['decimal places'].getint('percent', fallback=3)
 
-details_in_name_col = False
+details_in_name_col = True

@@ -40,7 +40,7 @@ def get_holdings():
         coins[k] = {'held': cfg['other coins'].getfloat(k)}
 
     if show_bitcoin_if_not_held and 'bitcoin' not in coins.keys() and 'btc' not in coins.keys():
-        coins['bitcoin'] = {'held': 0}
+        coins['bitcoin'] = {'held': 0, 'comparison_only': True}
 
     return coins
 
@@ -107,10 +107,12 @@ def prepare_data(currency, debug=False, test=False):
         coin_found = False
         for coin_json in cmc_data:
             if coin_name in [coin_json['name'].lower(), coin_json['symbol'].lower()]:
-                if Coin.debug:
-                    print(f' {coin_name} matched to {coin_json["name"]}')
+                coin = Coin(cmc_data=coin_json, ini_data=holdings[coin_name])
 
-                coins.append(Coin(cmc_data=coin_json, ini_data=holdings[coin_name]))
+                if Coin.debug and not coin.comparison_only:
+                    print(f' "{coin_name}" matched to {coin_json["name"]}')
+
+                coins.append(coin)
                 coin_found = True
                 break
 
@@ -298,12 +300,12 @@ def display_data(coins: List[Coin]):
                     f'{col_pad}{"":{l_perc}}{col_pad}{e.ver_thick}'
                 )
 
-            if split_validators:
+            if split_validators and len(c.validators) > 1:
                 print(f' {blank_line}')
                 for v in sorted(c.validators):
                     if details_in_name_col:
                         v_details_str = (
-                            f'{col_pad} - {v.index:<{l_name - 3}}{col_pad}{e.ver_thin}'
+                            f'{col_pad}  - {v.index:<{l_name - 4}}{col_pad}{e.ver_thin}'
                             f'{col_pad}{" " * big_gap}{col_pad}'
                         )
 

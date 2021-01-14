@@ -12,15 +12,18 @@ from c_constants import bc_json_file, dp, split_validators
 class Quantity:
     raw: float
     currency: str
+    is_validator: bool = False
     formatted: str = field(init=False)
 
     dec_places: InitVar[int] = None
 
     def __post_init__(self, dec_places: int):
-        self.formatted = f'{self.raw:,.{dec_places}f} {self.currency}' if self.raw > 0 else ''
+        self.formatted = f'{self.raw:,.{dec_places}f} {self.currency}' if self.raw > 0 or self.is_validator else ''
 
     def update_formatted_str(self, dec_places: int, padding: int):
-        self.formatted = f'{self.raw:,.{dec_places}f} {self.currency:<{padding}}' if self.raw > 0 else ''
+        self.formatted = (
+            f'{self.raw:,.{dec_places}f} {self.currency:<{padding}}' if self.raw > 0 or self.is_validator else ''
+        )
 
 
 @dataclass
@@ -33,14 +36,20 @@ class Subtype:
     in_eth: Quantity = field(init=False)
 
     fiat_value_of_one: InitVar[float] = None
+    is_validator: InitVar[bool] = False
 
-    def __post_init__(self, fiat_value_of_one: float):
+    def __post_init__(self, fiat_value_of_one: float, is_validator: bool):
         self.in_fiat = Quantity(
-            raw=self.quantity * fiat_value_of_one, dec_places=dp.fiat, currency=Coin.currency
+            raw=self.quantity * fiat_value_of_one, dec_places=dp.fiat, currency=Coin.currency, is_validator=is_validator
         )
 
-        self.in_btc = Quantity(raw=self.in_fiat.raw / Coin.btc_price, dec_places=dp.crypto, currency='BTC')
-        self.in_eth = Quantity(raw=self.in_fiat.raw / Coin.eth_price, dec_places=dp.crypto, currency='ETH')
+        self.in_btc = Quantity(
+            raw=self.in_fiat.raw / Coin.btc_price, dec_places=dp.crypto, currency='BTC', is_validator=is_validator
+        )
+
+        self.in_eth = Quantity(
+            raw=self.in_fiat.raw / Coin.eth_price, dec_places=dp.crypto, currency='ETH', is_validator=is_validator
+        )
 
 
 @total_ordering
@@ -62,7 +71,7 @@ class Validator:
         self.balance = val_dict['balance'] / 1000000000
         self.earned = Subtype(
             quantity=self.balance - self.staked, short_str=f'{self.index:>{longest_val_index}}',
-            fiat_value_of_one=fiat_value_of_one
+            fiat_value_of_one=fiat_value_of_one, is_validator=True
         )
 
     def __eq__(self, other):
@@ -88,6 +97,7 @@ class Coin:
     rank: int = field(init=False)
     name: str = field(init=False)
     symbol: str = field(init=False)
+    comparison_only: bool = field(init=False)
     #total_held: float = field(init=False)
     total_held: Optional[Quantity] = field(init=False, default=None)
 
@@ -110,6 +120,7 @@ class Coin:
         self.rank = cmc_data['cmc_rank']
         self.name = cmc_data['name']
         self.symbol = cmc_data['symbol']
+        self.comparison_only = ini_data.get('comparison_only', False)
         fiat_value_of_one = float(cmc_data['quote'][Coin.currency.upper()]['price'])
 
         self.value_of_one = Subtype(quantity=1, fiat_value_of_one=fiat_value_of_one)
@@ -130,6 +141,11 @@ class Coin:
                     Validator(val_dict=v, fiat_value_of_one=fiat_value_of_one, longest_val_index=longest_val_index)
                     for v in bc_data
                 ]
+                #
+                # for v in self.validators:
+                #     print(v)
+                #
+                # exit(0)
 
                 total_staked = sum([v.staked for v in self.validators])
                 self.qty_staked = Subtype(
@@ -140,7 +156,7 @@ class Coin:
                 total_earned = sum([v.earned.quantity for v in self.validators])
                 self.qty_earned = Subtype(
                     quantity=total_earned, short_str='Earned', long_str='Total earned',
-                    fiat_value_of_one=fiat_value_of_one
+                    fiat_value_of_one=fiat_value_of_one, is_validator=True
                 )
 
                 Coin.is_staking_eth = True
@@ -178,10 +194,12 @@ class Coin:
                 json.dump(bc_data, f)
             
             if Coin.debug:
-                print(f'done ({(time.perf_counter() - b_start):.3f}s)')            
+                print(f'done ({(time.perf_counter() - b_start):.3f}s)')
+
         data = bc_data['data']
         if not isinstance(data, list):
             data = [data]
+
         return data
 
     def pad_held_str(self, longest_symbol, perc_of_total):
