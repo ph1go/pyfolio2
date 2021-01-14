@@ -179,8 +179,10 @@ class Coin:
             
             if Coin.debug:
                 print(f'done ({(time.perf_counter() - b_start):.3f}s)')            
-
-        return bc_data['data']
+        data = bc_data['data']
+        if not isinstance(data, list):
+            data = [data]
+        return data
 
     def pad_held_str(self, longest_symbol, perc_of_total):
         self.total_held.update_formatted_str(dec_places=dp.crypto, padding=longest_symbol)
