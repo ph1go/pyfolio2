@@ -55,22 +55,34 @@ class Subtype:
 @total_ordering
 @dataclass
 class Validator:
-    index: int = field(init=False)
+    index: str = field(init=False)
+    public_key: str = field(init=False)
     val_str: str = field(init=False)
     balance: float = field(init=False)
-    staked: float = 32
+    staked: Subtype = field(init=False)
+    total: Subtype = field(init=False)
     earned: Subtype = field(init=False)
+    percentage: Quantity = field(init=False)
 
     val_dict: InitVar[Dict] = None
     fiat_value_of_one: InitVar[float] = None
     longest_val_index: InitVar[int] = None
 
     def __post_init__(self, val_dict: Dict, fiat_value_of_one: float, longest_val_index: int):
-        self.index = val_dict['validatorindex']
+        self.index = str(val_dict['validatorindex'])
+        self.public_key = val_dict['pubkey']
         self.val_str = f'Validator #{self.index} earnings'
         self.balance = val_dict['balance'] / 1000000000
+        self.staked = Subtype(
+            quantity=32.0, short_str=f'{self.index:>{longest_val_index}}',
+            fiat_value_of_one=fiat_value_of_one, is_validator=True
+        )
         self.earned = Subtype(
-            quantity=self.balance - self.staked, short_str=f'{self.index:>{longest_val_index}}',
+            quantity=self.balance - self.staked.in_eth.raw, short_str=f'{self.index:>{longest_val_index}}',
+            fiat_value_of_one=fiat_value_of_one, is_validator=True
+        )
+        self.total = Subtype(
+            quantity=self.balance, short_str=f'{self.index:>{longest_val_index}}',
             fiat_value_of_one=fiat_value_of_one, is_validator=True
         )
 
@@ -147,7 +159,7 @@ class Coin:
                 #
                 # exit(0)
 
-                total_staked = sum([v.staked for v in self.validators])
+                total_staked = sum([v.staked.in_eth.raw for v in self.validators])
                 self.qty_staked = Subtype(
                     quantity=total_staked, short_str='Staked', long_str='Total staked',
                     fiat_value_of_one=fiat_value_of_one
@@ -188,19 +200,33 @@ class Coin:
                 b_start = time.perf_counter()
                 
             url = f'https://beaconcha.in/api/v1/validator/{",".join(self.validator_indexes)}'
-            bc_data = requests.get(url).json()
 
-            with bc_json_file.open('w') as f:
-                json.dump(bc_data, f)
+            try:
+                bc_data = requests.get(url).json()
+
+            except json.decoder.JSONDecodeError:
+                if bc_json_file.is_file():
+                    print(
+                        ' Bad JSON from beaconcha.in, loading locally saved validator balances from the last '
+                        'successful call...'
+                    )
+                    with bc_json_file.open() as f:
+                        bc_data = json.load(f)
+
+                else:
+                    print(' Bad JSON from beaconcha.in, no locally saved validator balances found.')
+                    exit()
+
+            else:
+                with bc_json_file.open('w') as f:
+                    json.dump(bc_data, f)
             
             if Coin.debug:
                 print(f'done ({(time.perf_counter() - b_start):.3f}s)')
 
         data = bc_data['data']
-        if not isinstance(data, list):
-            data = [data]
 
-        return data
+        return data if isinstance(data, list) else [data]
 
     def pad_held_str(self, longest_symbol, perc_of_total):
         self.total_held.update_formatted_str(dec_places=dp.crypto, padding=longest_symbol)

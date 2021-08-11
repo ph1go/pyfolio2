@@ -1,4 +1,6 @@
 import json
+from operator import attrgetter
+
 import requests
 import time
 import configparser
@@ -6,10 +8,10 @@ from typing import List
 
 from c_constants import (
     cmc_json_file, holdings_file, cmc_headers, num_coins, split_validators, show_bitcoin_if_not_held, dp,
-    details_in_name_col
+    details_in_name_col, sort_vals_by_earnings
 )
 
-from c_dataclasses import Coin, Quantity, Elements
+from c_dataclasses import Coin, Validator, Quantity, Elements
 
 
 def get_holdings():
@@ -57,10 +59,22 @@ def get_coinmarketcap_data(currency, debug, test):
 
         url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
         parameters = {'start': '1', 'limit': num_coins, 'convert': currency}
-        cmc_data = requests.get(url, headers=cmc_headers, params=parameters).json()
+        try:
+            cmc_data = requests.get(url, headers=cmc_headers, params=parameters).json()
 
-        with cmc_json_file.open('w') as f:
-            json.dump(cmc_data, f)
+        except json.decoder.JSONDecodeError:
+            if cmc_json_file.is_file():
+                print(' Bad JSON from coinmarketcap, loading locally price data from the last successful call...')
+                with cmc_json_file.open() as f:
+                    cmc_data = json.load(f)
+
+            else:
+                print(' Bad JSON from coinmarketcap, no locally saved price data found.')
+                exit()
+
+        else:
+            with cmc_json_file.open('w') as f:
+                json.dump(cmc_data, f)
             
         if debug:
             print(f'done ({(time.perf_counter() - c_start):.3f}s)')
@@ -72,15 +86,21 @@ def print_message(msg):
     print(f' {time.strftime("%H:%M:%S")} {msg}')
     
 
-def prepare_data(currency, debug=False, test=False):
+def prepare_data(currency, args): #  debug=False, test=False):
     Coin.currency = currency
-    Coin.debug = debug
-    Coin.test = test
-    
+    Coin.debug = debug = args.debug
+    Coin.test = test = args.test
+
+    # print(debug, test, validators, currency)
+    # exit()
+
     if debug:
         print(f' {time.strftime("%H:%M:%S")} loading holdings... ', end='', flush=True)
         
     holdings = get_holdings()
+
+    # print(holdings)
+    # exit()
 
     if debug:
         print('done')
@@ -119,7 +139,7 @@ def prepare_data(currency, debug=False, test=False):
         if coin_found:
             continue
 
-        print('fuck. coin not found:', coin_name)
+        print(f' No matching coin found for "{coin_name}".')
 
     Coin.fiat_total = Quantity(
         raw=sum([c.value_of_held.in_fiat.raw for c in coins]), dec_places=dp.fiat, currency=currency
@@ -137,9 +157,198 @@ def prepare_data(currency, debug=False, test=False):
 
     for coin in coins:
         perc_of_total = (coin.value_of_held.in_fiat.raw / Coin.fiat_total.raw) * 100
-        coin.pad_held_str(longest_symbol, perc_of_total=perc_of_total)
+        if not args.validators:
+            coin.pad_held_str(longest_symbol, perc_of_total=perc_of_total)
 
     return coins
+
+
+def display_validators(validators: List[Validator]):
+    pad = 1
+
+    l_rank = max(3, len(str(len(validators))))
+    l_rank_w_pad = l_rank + (2 * pad) + 1
+
+    l_index = max(5, len(max([v.index for v in validators], key=len)))
+    l_index_w_pad = l_index + (2 * pad)
+
+    total_pad = l_rank_w_pad + l_index_w_pad + 2
+
+    staked_in_eth_total = Quantity(
+        raw=sum([v.staked.in_eth.raw for v in validators]), dec_places=dp.fiat, currency='ETH'
+    )
+
+    staked_in_btc_total = Quantity(
+        raw=sum([v.staked.in_btc.raw for v in validators]), dec_places=dp.fiat, currency='BTC'
+    )
+
+    staked_in_fiat_total = Quantity(
+        raw=sum([v.staked.in_fiat.raw for v in validators]), dec_places=dp.fiat, currency=Coin.currency
+    )
+
+    earned_in_eth_total = Quantity(
+        raw=sum([v.earned.in_eth.raw for v in validators]), dec_places=dp.fiat, currency='ETH'
+    )
+
+    earned_in_btc_total = Quantity(
+        raw=sum([v.earned.in_btc.raw for v in validators]), dec_places=dp.fiat, currency='BTC'
+    )
+
+    earned_in_fiat_total = Quantity(
+        raw=sum([v.earned.in_fiat.raw for v in validators]), dec_places=dp.fiat, currency=Coin.currency
+    )
+
+    total_in_eth_total = Quantity(
+        raw=sum([v.total.in_eth.raw for v in validators]), dec_places=dp.fiat, currency='ETH'
+    )
+
+    total_in_btc_total = Quantity(
+        raw=sum([v.total.in_btc.raw for v in validators]), dec_places=dp.fiat, currency='BTC'
+    )
+
+    total_in_fiat_total = Quantity(
+        raw=sum([v.total.in_fiat.raw for v in validators]), dec_places=dp.fiat, currency=Coin.currency
+    )
+
+    for validator in validators:
+        perc = (validator.total.in_eth.raw / total_in_eth_total.raw) * 100
+        validator.percentage = Quantity(raw=perc, currency='%', dec_places=dp.percent)
+
+    l_percentage = len(max([v.percentage.formatted for v in validators], key=len))
+    l_percentage_w_pad = l_percentage + (2 * pad)
+
+    staked_in_eth = max(6, len(staked_in_eth_total.formatted))
+    staked_in_eth_w_pad = staked_in_eth + (2 * pad)
+    staked_in_btc = max(6, len(staked_in_btc_total.formatted))
+    staked_in_btc_w_pad = staked_in_btc + (2 * pad)
+    staked_in_fiat = max(6, len(staked_in_fiat_total.formatted))
+    staked_in_fiat_w_pad = staked_in_fiat + (2 * pad)
+
+    earned_in_eth = max(6, len(earned_in_eth_total.formatted))
+    earned_in_eth_w_pad = earned_in_eth + (2 * pad)
+    earned_in_btc = max(6, len(earned_in_btc_total.formatted))
+    earned_in_btc_w_pad = earned_in_btc + (2 * pad)
+    earned_in_fiat = max(6, len(earned_in_fiat_total.formatted))
+    earned_in_fiat_w_pad = earned_in_fiat + (2 * pad)
+
+    total_in_eth = max(6, len(total_in_eth_total.formatted))
+    total_in_eth_w_pad = total_in_eth + (2 * pad)
+    total_in_btc = max(6, len(total_in_btc_total.formatted))
+    total_in_btc_w_pad = total_in_btc + (2 * pad)
+    total_in_fiat = max(6, len(total_in_fiat_total.formatted))
+    total_in_fiat_w_pad = total_in_fiat + (2 * pad)
+
+    col_pad = " " * pad
+
+    e = Elements()
+
+    show_btc = False
+
+    staked_width = staked_in_eth_w_pad + staked_in_fiat_w_pad
+    earned_width = earned_in_eth_w_pad + earned_in_fiat_w_pad
+    total_width = total_in_eth_w_pad + total_in_fiat_w_pad
+
+    staked_header = f'{col_pad}{"STAKED":>{staked_in_eth}}{col_pad}'
+    earned_header = f'{col_pad}{"EARNED":>{earned_in_eth}}{col_pad}'
+    total_header = f'{col_pad}{"TOTAL":>{total_in_eth}}{col_pad}'
+
+    staked_total = f'{col_pad}{staked_in_eth_total.formatted:>{staked_in_eth}}{col_pad}'
+    earned_total = f'{col_pad}{earned_in_eth_total.formatted:>{earned_in_eth}}{col_pad}'
+    total_total = f'{col_pad}{total_in_eth_total.formatted:>{total_in_eth}}{col_pad}'
+
+    if show_btc:
+        staked_width += staked_in_btc_w_pad
+        earned_width += earned_in_btc_w_pad
+        total_width += total_in_btc_w_pad
+        staked_header += f'{col_pad}{"in BTC":>{staked_in_btc}}{col_pad}'
+        earned_header += f'{col_pad}{"in BTC":>{earned_in_btc}}{col_pad}'
+        total_header += f'{col_pad}{"in BTC":>{total_in_btc}}{col_pad}'
+        staked_total += f'{col_pad}{staked_in_btc_total.formatted:>{staked_in_btc}}{col_pad}'
+        earned_total += f'{col_pad}{earned_in_btc_total.formatted:>{earned_in_btc}}{col_pad}'
+        total_total += f'{col_pad}{total_in_btc_total.formatted:>{total_in_btc}}{col_pad}'
+
+    staked_header += f'{col_pad}{f"in {Coin.currency}":>{staked_in_fiat}}{col_pad}'
+    earned_header += f'{col_pad}{f"in {Coin.currency}":>{earned_in_fiat}}{col_pad}'
+    total_header += f'{col_pad}{f"in {Coin.currency}":>{total_in_fiat}}{col_pad}'
+    staked_total += f'{col_pad}{staked_in_fiat_total.formatted:>{staked_in_fiat}}{col_pad}'
+    earned_total += f'{col_pad}{earned_in_fiat_total.formatted:>{earned_in_fiat}}{col_pad}'
+    total_total += f'{col_pad}{total_in_fiat_total.formatted:>{total_in_fiat}}{col_pad}'
+
+    total_total_line = (
+        f'{"Total: ":>{total_pad}}{e.ver_thick}'
+        f'{staked_total}{e.ver_thin}{earned_total}{e.ver_thin}{total_total}{e.ver_thick}'
+    )
+
+    top = (
+        f'{e.top.left}{e.hor_thick * l_rank_w_pad}{e.top.mid_thick}{e.hor_thick * l_index_w_pad}{e.top.mid_thick}'
+        f'{e.hor_thick * staked_width}{e.top.mid_thin}{e.hor_thick * earned_width}'
+        f'{e.top.mid_thin}{e.hor_thick * total_width}'
+        f'{e.top.right}'
+    )
+
+    header = (
+        f'{e.ver_thick}{col_pad}Rank{col_pad}{e.ver_thick}{col_pad}{"Index":<{l_index}}{col_pad}{e.ver_thick}'
+        f'{staked_header}{e.ver_thin}{earned_header}{e.ver_thin}{total_header}'
+        f'{e.ver_thick}'
+    )
+
+    body_top = (
+        f'{e.mid_thick.left}{e.hor_thick * l_rank_w_pad}{e.mid_thick.mid_thick}'
+        f'{e.hor_thick * l_index_w_pad}{e.mid_thick.mid_thick}'
+        f'{e.hor_thick * staked_width}{e.mid_thick.mid_thin}'
+        f'{e.hor_thick * earned_width}{e.mid_thick.mid_thin}'
+        f'{e.hor_thick * total_width}'
+        f'{e.mid_thick.mid_thick}{e.hor_thick * l_percentage_w_pad}{e.top.right}'
+    )
+
+    body_bottom = (
+        f'{e.bot.left}{e.hor_thick * l_rank_w_pad}'
+        f'{e.bot.mid_thick}{e.hor_thick * l_index_w_pad}'
+        f'{e.mid_thick.mid_thick}{e.hor_thick * staked_width}'
+        f'{e.mid_thick.mid_thin}{e.hor_thick * earned_width}'
+        f'{e.mid_thick.mid_thin}{e.hor_thick * total_width}'
+        f'{e.mid_thick.mid_thick}{e.hor_thick * l_percentage_w_pad}{e.bot.right}'
+    )
+
+    bottom = (
+        f'{" " * total_pad}{e.bot.left}'
+        f'{e.hor_thick * staked_width}{e.bot.mid_thin}'
+        f'{e.hor_thick * earned_width}{e.bot.mid_thin}'
+        f'{e.hor_thick * total_width}{e.bot.right}'
+    )
+
+    if sort_vals_by_earnings:
+        validators.sort(key=attrgetter('earned.quantity'), reverse=True)
+
+    else:
+        validators.sort()
+
+    print(f'\n {time.strftime("%A - %Y/%m/%d - %X")}\n\n {top}\n {header}\n {body_top}')
+
+    for idx, validator in enumerate(validators):
+        staked_line = f'{col_pad}{validator.staked.in_eth.formatted:>{staked_in_eth}}{col_pad}'
+        earned_line = f'{col_pad}{validator.earned.in_eth.formatted:>{earned_in_eth}}{col_pad}'
+        total_line = f'{col_pad}{validator.total.in_eth.formatted:>{total_in_eth}}{col_pad}'
+
+        if show_btc:
+            staked_line += f'{col_pad}{validator.staked.in_btc.formatted:>{staked_in_btc}}{col_pad}'
+            earned_line += f'{col_pad}{validator.earned.in_btc.formatted:>{earned_in_btc}}{col_pad}'
+            total_line += f'{col_pad}{validator.total.in_btc.formatted:>{total_in_btc}}{col_pad}'
+
+        staked_line += f'{col_pad}{validator.staked.in_fiat.formatted:>{staked_in_fiat}}{col_pad}'
+        earned_line += f'{col_pad}{validator.earned.in_fiat.formatted:>{earned_in_fiat}}{col_pad}'
+        total_line += f'{col_pad}{validator.total.in_fiat.formatted:>{total_in_fiat}}{col_pad}'
+
+        validator_line = (
+            f' {e.ver_thick}{col_pad}{idx+1:>{l_rank}}){col_pad}{e.ver_thick}'
+            f'{col_pad}{validator.index:>{l_index}}{col_pad}{e.ver_thick}'
+            f'{staked_line}{e.ver_thin}{earned_line}{e.ver_thin}{total_line}{e.ver_thick}'
+            f'{col_pad}{validator.percentage.formatted:>{l_percentage}}{col_pad}{e.ver_thick}'
+        )
+
+        print(validator_line)
+
+    print(f' {body_bottom}\n {total_total_line}\n {bottom}')
 
 
 def display_data(coins: List[Coin]):
@@ -302,7 +511,14 @@ def display_data(coins: List[Coin]):
 
             if split_validators and len(c.validators) > 1:
                 print(f' {blank_line}')
-                for v in sorted(c.validators):
+
+                if sort_vals_by_earnings:
+                    vals = sorted(c.validators, key=attrgetter('earned.quantity'), reverse=True)
+
+                else:
+                    vals = sorted(c.validators)
+
+                for v in vals:
                     if details_in_name_col:
                         v_details_str = (
                             f'{col_pad}  - {v.index:<{l_name - 4}}{col_pad}{e.ver_thin}'

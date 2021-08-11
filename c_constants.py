@@ -72,3 +72,4 @@ dp.crypto = cfg['decimal places'].getint('crypto', fallback=5)
 dp.percent = cfg['decimal places'].getint('percent', fallback=3)
 
 details_in_name_col = True
+sort_vals_by_earnings = True
