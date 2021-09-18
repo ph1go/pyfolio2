@@ -5,7 +5,7 @@ This is a Python (3.7+) tool to show you the value (in a currency of your choice
 of your holdings in whatever coins you hold, updated to include earnings from ETH staking.
 
 It won't show you if your holdings are up or down or whatever, it just gives you an at-a-glance total
-according to the current prices on CoinMarketCap. If you're staking and you provide indexes of your 
+according to the current prices on CoinGecko. If you're staking and you provide indexes of your 
 validator(s), you will also see your earnings.
 
 Installation
@@ -15,18 +15,27 @@ PowerShell in Windows or any Linux terminal).
 
 The config.ini file
 ===================
-This is generated when you first run the script. You need a CoinMarketCap API key. To obtain one, go to 
-https://pro.coinmarketcap.com/ and then paste it in when asked. 
+This is generated when you first run the script.
 
-The "number of coins" is how many coins are returned by the CoinMarketCap API call. The default is 200, 
-if you hold coins that are ranked lower than that, increase it accordingly.
+`show individual validators` - either show earnings per validator (as well as in total) or just the total.
 
-If "show individual validators" is True, your earnings will be shown per-validator as well as in total.
+`show bitcoin if not held` either include Bitcoin's price even if you don't include it in the
+holdings file. To show other coins you don't hold, add them to the `holdings.ini` file with 0 held.
 
-If "show bitcoin if not held" is True, Bitcoin's price will be shown even if you don't include it in the
-holdings file.
+`show market caps` show the market caps section
 
-The "decimal places" fields are pretty self-explanatory, increase the values if you need higher accuracy.
+`show market cap percentages` display each coin's market cap as a percentage of the coins you're comparing with 
+(default BTC and ETH)
+
+`compare to bitcoin` compare "Market cap" (if `show market caps` is set to True), "Price of 1" and "Value held" 
+figures to Bitcoin
+
+`compare to ethereum` compare "Market cap" (if `show market caps` is set to True), "Price of 1" and "Value held" 
+figures to Ethereum
+
+`compare to` specify other coins to use for the above comparisons
+
+The `decimal places` fields are pretty self-explanatory, increase the values if you need higher accuracy.
 
 The holdings.ini file
 =====================
@@ -37,6 +46,8 @@ validators in "validators", separated by commas. That's all you need to do, the 
 call to beaconcha.in to calculate your earnings and, from the number of validators, how much you staked.
 
 Enter any other coins you hold in the "other coins" section. Use either the name (eg: Ethereum) or the 
-symbol (eg: ETH). Case doesn't matter. If your coin isn't accepted and you're sure you entered either its
-name or symbol correctly, check that the "number of coins" setting in config.ini is high enough to reach
-that coin's rank.
+symbol (eg: ETH). If the app finds multiple coins that match whatever you entered, you'll be given a choice 
+and the result will be saved. If you'd like to include coins that you don't hold for comparison, add them 
+with 0 held
+
+
