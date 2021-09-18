@@ -31,7 +31,7 @@ if not config_file.is_file():
         'show market cap percentages': True,
         'compare to bitcoin': True,
         'compare to ethereum': True,
-        'compare to': None
+        'compare to': ''
     }
 
     cfg['decimal places'] = {'fiat': '5', 'crypto': '5', 'percent': '3'}
