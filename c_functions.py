@@ -1,6 +1,3 @@
-import json
-from operator import attrgetter
-
 import time
 import configparser
 from typing import List
@@ -8,8 +5,8 @@ from typing import List
 from c_api import is_valid_currency, get_coins_list, get_coin_prices
 
 from c_constants import (
-    holdings_file, split_validators, show_bitcoin_if_not_held, dp, show_btc_in_validator_view,
-    details_in_name_col, sort_vals_by_earnings, show_market_caps, show_market_cap_percentages,
+    holdings_file, split_validators, show_bitcoin_if_not_held, dp,
+    details_in_name_col, show_market_caps, show_market_cap_percentages,
     compare_to_btc, compare_to_eth, compare_to, column_pad
 )
 

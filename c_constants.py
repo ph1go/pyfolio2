@@ -1,6 +1,5 @@
 from pathlib import Path
 import configparser
-import requests
 from collections import namedtuple
 
 this_path = Path(__file__).parent
