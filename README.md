@@ -48,6 +48,6 @@ call to beaconcha.in to calculate your earnings and, from the number of validato
 Enter any other coins you hold in the "other coins" section. Use either the name (eg: Ethereum) or the 
 symbol (eg: ETH). If the app finds multiple coins that match whatever you entered, you'll be given a choice 
 and the result will be saved. If you'd like to include coins that you don't hold for comparison, add them 
-with 0 held
+with 0 held.
 
 
