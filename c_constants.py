@@ -33,7 +33,7 @@ if not config_file.is_file():
         'compare to': ''
     }
 
-    cfg['decimal places'] = {'fiat': '5', 'crypto': '5', 'percent': '3'}
+    cfg['decimal places'] = {'fiat': '5', 'fiat total': '2', 'crypto': '5', 'percent': '3'}
 
     with config_file.open('w') as f:
         cfg.write(f)
@@ -52,11 +52,9 @@ compare_to_eth = cfg['options'].getboolean('compare to ethereum', fallback=True)
 _compare_to = cfg['options'].get('compare to', fallback='')
 compare_to = [x.strip() for x in _compare_to.split(',')]
 
-# if compare_to is not None and not compare_to:
-#     compare_to = []
-
-dp = namedtuple('dp', 'fiat crypto percent')
+dp = namedtuple('dp', 'fiat fiat_total crypto percent')
 dp.fiat = cfg['decimal places'].getint('fiat', fallback=5)
+dp.fiat_total = cfg['decimal places'].getint('fiat total', fallback=2)
 dp.crypto = cfg['decimal places'].getint('crypto', fallback=5)
 dp.percent = cfg['decimal places'].getint('percent', fallback=3)
 

@@ -181,7 +181,7 @@ def prepare_data(fiat_currency, args):
     coins = [Coin(coin_data=coins_json['holdings'][c]) for c in coins_json['holdings']]
 
     Coin.total_held_in_fiat = Quantity(
-        raw=sum([c.value_of_held.raw for c in coins]), dec_places=dp.fiat, currency=Coin.fiat_currency
+        raw=sum([c.value_of_held.raw for c in coins]), dec_places=dp.fiat_total, currency=Coin.fiat_currency
     )
 
     for coin in coins:

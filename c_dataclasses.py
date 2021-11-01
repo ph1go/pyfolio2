@@ -59,7 +59,7 @@ class EthSubtype:
 
         self.in_fiat = Quantity(
             raw=self.quantity.raw * fiat_value_of_one,
-            dec_places=dp.fiat, currency=Coin.fiat_currency, is_validator=is_validator
+            dec_places=dp.fiat_total, currency=Coin.fiat_currency, is_validator=is_validator
         )
 
         for comp in Coin.comparison_coins:
@@ -236,7 +236,7 @@ class Coin(CoinBase):
 
         self.total_held = Quantity(raw=total_held, dec_places=dp.crypto, currency=self.symbol, pad_symbol=True)
         self.value_of_held = Quantity(
-            raw=self.total_held.raw * self.value_of_one.raw, currency=Coin.fiat_currency, dec_places=dp.fiat
+            raw=self.total_held.raw * self.value_of_one.raw, currency=Coin.fiat_currency, dec_places=dp.fiat_total
         )
 
         for comp in Coin.comparison_coins:

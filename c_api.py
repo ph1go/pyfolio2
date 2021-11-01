@@ -24,8 +24,8 @@ def _do_request(url, params=None):
 
         except Exception as e:
         # except json.decoder.JSONDecodeError:
-            print(response.content, e.msg)
-            exit()
+            # print(response.content, e.msg)
+            print(f' bad response from {url}\n')
 
         else:
             return response_json
@@ -107,11 +107,24 @@ def get_coin_prices(coins, currency, debug=False, test=False):
         params = {'ids': ','.join(coin_ids), 'vs_currency': currency}
 
         price_data = _do_request(url=coingecko_markets_url, params=params)
-        #
-        # price_data = requests.get(
-        #     coingecko_markets_url, headers=coingecko_headers, params=params, timeout=request_timeout
-        # ).json()
-        update_saved_data = True
+
+        if price_data:
+            update_saved_data = True
+
+        elif coins_json_file.is_file():
+            print(f' {time.strftime("%H:%M:%S")} no json returned, loading data from "{coins_json_file}"... ')
+            if debug:
+                print(
+                    f' {time.strftime("%H:%M:%S")} price data file ("{coins_json_file}") found, loading... ',
+                    end='', flush=True
+                )
+
+            with coins_json_file.open() as f:
+                price_data = json.load(f)
+
+        else:
+            print(f' {time.strftime("%H:%M:%S")} bad http response and no saved data file found... exiting.')
+            exit()
 
     for coin_data in price_data:
         if coin_data['id'] in coins['comparison']:
