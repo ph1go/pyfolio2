@@ -20,8 +20,6 @@ def get_holdings(debug=False, comparison_coins=None, validator_mode=False):
         close_matches = []
         for coin in coins_list:
             coin_names = [coin['id'].lower(), coin['symbol'].lower(), coin['name'].lower()]
-            # if coin_id == 'binance':
-            #     print(coin_names)
 
             if coin_id.lower() in coin_names:
                 coin_ids.append(coin)
@@ -31,8 +29,6 @@ def get_holdings(debug=False, comparison_coins=None, validator_mode=False):
                     if coin_id.lower() in coin_name:
                         close_matches.append(coin_names)
                         break
-
-        # print(coin_ids)
 
         if coin_ids:
             if len(coin_ids) > 1:
