@@ -1,4 +1,3 @@
-import json
 import time
 import configparser
 from typing import List
