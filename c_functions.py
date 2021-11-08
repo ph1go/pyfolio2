@@ -1,3 +1,4 @@
+import json
 import time
 import configparser
 from typing import List
@@ -16,9 +17,22 @@ from c_dataclasses import Coin, CoinBase, Validator, Quantity, Elements, TableCo
 def get_holdings(debug=False, comparison_coins=None, validator_mode=False):
     def match_coin(coin_id):
         coin_ids = []
+        close_matches = []
         for coin in coins_list:
-            if coin_id.lower() in [coin['id'].lower(), coin['symbol'].lower(), coin['name'].lower()]:
+            coin_names = [coin['id'].lower(), coin['symbol'].lower(), coin['name'].lower()]
+            # if coin_id == 'binance':
+            #     print(coin_names)
+
+            if coin_id.lower() in coin_names:
                 coin_ids.append(coin)
+
+            else:
+                for coin_name in coin_names:
+                    if coin_id.lower() in coin_name:
+                        close_matches.append(coin_names)
+                        break
+
+        # print(coin_ids)
 
         if coin_ids:
             if len(coin_ids) > 1:
@@ -39,7 +53,25 @@ def get_holdings(debug=False, comparison_coins=None, validator_mode=False):
                 sel_coin_id = coin_ids[0]['id'].lower()
 
         else:
-            print(f' No match found for "{coin_id}".')
+            print(f' No exact match found for "{coin_id}"', end='', flush=True)
+            if close_matches:
+                longest_id = len(max([x[0] for x in close_matches], key=len))
+                longest_symbol = len(max([x[1] for x in close_matches], key=len))
+                longest_name = len(max([x[2] for x in close_matches], key=len))
+                print(
+                    f' but found {len(close_matches)} partial match{"es" if len(close_matches) > 1 else ""}.\n\n'
+                    f' Try changing the entry in the holdings file to match one of the following ids:\n\n'
+                    f'   {"id":{longest_id}}    {"symbol":>{longest_symbol}}    name'
+                )
+
+                for m in close_matches:
+                    print(f'   {m[0]:{longest_id}}    {m[1]:>{longest_symbol}}    {m[2]}')
+
+                print()
+
+            else:
+                print('.')
+
             sel_coin_id = None
 
         return sel_coin_id
@@ -116,6 +148,10 @@ def get_holdings(debug=False, comparison_coins=None, validator_mode=False):
     cfg_updated = False
     for other_coin_id in other_coins:
         selected_coin_id = match_coin(other_coin_id)
+
+        if not selected_coin_id:
+            continue
+
         selected_coin_holdings = cfg['other coins'].getfloat(other_coin_id)
         holdings[selected_coin_id] = {'held': selected_coin_holdings}
 
@@ -169,11 +205,18 @@ def prepare_data(fiat_currency, args):
     )
     coins_json = get_coin_prices(coins=coins_json, currency=Coin.fiat_currency, debug=debug, test=test)
 
+    coins_json['holdings'] = {
+        cj: coins_json['holdings'][cj] for cj in coins_json['holdings']
+        if coins_json['holdings'][cj].get('symbol') and coins_json['holdings'][cj].get('rank')
+    }
+
     if args.validators:
         Coin.longest_symbol = 3
 
     else:
-        Coin.longest_symbol = len(max([coins_json['holdings'][c]['symbol'] for c in coins_json['holdings']], key=len))
+        Coin.longest_symbol = len(
+            max([coins_json['holdings'][c]['symbol'] for c in coins_json['holdings']], key=len)
+        )
 
     Coin.comparison_coins = [CoinBase(coin_data=coins_json['comparison'][c]) for c in coins_json['comparison']]
     Coin.comparison_coins.sort()
