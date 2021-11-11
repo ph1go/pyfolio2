@@ -22,6 +22,10 @@ if __name__ == '__main__':
     )
     parser.add_argument('-d', '--debug', action='store_true')
     parser.add_argument(
+        '-u', '--update-coins-list', action='store_true',
+        help='download a fresh copy of the CoinGecko coins list (necessary if they add a new coin)'
+    )
+    parser.add_argument(
         '-t', '--test', action='store_true',
         help='use locally saved data instead of getting it fresh from the apis (saves api calls while testing)'
     )

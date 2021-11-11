@@ -42,27 +42,35 @@ def is_valid_currency(currency):
     return True if currency.lower() in currencies else False
 
 
-def get_coins_list(debug=False):
+def get_coins_list(debug=False, update=False):
     if debug:
         start = time.perf_counter()
 
-    if coins_list_json_file.is_file():
-        if debug:
-            print(
-                f' {time.strftime("%H:%M:%S")} coins file ("{coins_list_json_file}") found, loading... ',
-                end='', flush=True
-            )
+    download_list = False
 
-        with coins_list_json_file.open() as f:
-            coins_list = json.load(f)
+    coins_file_str = f'{time.strftime("%H:%M:%S")} coins file ("{coins_list_json_file}")'
+
+    if coins_list_json_file.is_file():
+        if update:
+            if debug:
+                print(f' {coins_file_str} found but downloading fresh copy... ', end='', flush=True)
+
+            download_list = True
+
+        else:
+            if debug:
+                print(f' {coins_file_str} found, loading... ', end='', flush=True)
+
+            with coins_list_json_file.open() as f:
+                coins_list = json.load(f)
 
     else:
         if debug:
-            print(
-                f' {time.strftime("%H:%M:%S")} coins file ("{coins_list_json_file}") not found, downloading... ',
-                end='', flush=True
-            )
+            print(f' {coins_file_str} not found, downloading... ', end='', flush=True)
 
+        download_list = True
+
+    if download_list:
         coins_list = requests.get(coingecko_coins_url, headers=coingecko_headers, timeout=request_timeout).json()
 
         with coins_list_json_file.open('w') as f:

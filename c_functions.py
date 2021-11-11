@@ -13,7 +13,7 @@ from c_constants import (
 from c_dataclasses import Coin, CoinBase, Validator, Quantity, Elements, TableCol
 
 
-def get_holdings(debug=False, comparison_coins=None, validator_mode=False):
+def get_holdings(debug=False, comparison_coins=None, validator_mode=False, update=False):
     def match_coin(coin_id):
         coin_ids = []
         close_matches = []
@@ -71,7 +71,7 @@ def get_holdings(debug=False, comparison_coins=None, validator_mode=False):
 
         return sel_coin_id
 
-    coins_list = get_coins_list(debug=debug)
+    coins_list = get_coins_list(debug=debug, update=update)
 
     matched_comp_coins = []
     for c in comparison_coins:
@@ -196,7 +196,8 @@ def prepare_data(fiat_currency, args):
     Coin.fiat_currency = fiat_currency
 
     coins_json = get_holdings(
-        debug=debug, comparison_coins=args.compare_to if args.compare_to else compare_to, validator_mode=args.validators
+        debug=debug, comparison_coins=args.compare_to if args.compare_to else compare_to,
+        validator_mode=args.validators, update=args.update_coins_list
     )
     coins_json = get_coin_prices(coins=coins_json, currency=Coin.fiat_currency, debug=debug, test=test)
 
